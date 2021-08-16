@@ -146,7 +146,7 @@ typedef struct EventData
 	uint16_t    adc; //Event_Off_Pixel_Timestamp_Mode: adc is 0; Event Intensity Mode: adc is "Intensity"; Event_In_Pixel_Timestamp_Mode: adc is "Optical-flow T"
 	int16_t     polarity; //-1: intensity weakened; 1: intensity is increased; 0 intensity unchanged
 	uint32_t    tInPixelIncreasing;
-	uint64_t    tOffPixelIncreasing; //it won't be reset, it's a monotonically increasing value
+	uint32_t    tOffPixelIncreasing; //it won't be reset, it's a monotonically increasing value
 } EventData;
 
 typedef enum EventShowType

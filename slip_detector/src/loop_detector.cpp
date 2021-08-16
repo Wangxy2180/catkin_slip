@@ -168,7 +168,7 @@ bool LoopSlipDetector::grabLoopData()
     if(!getOFDirection(loop_of_buffer_))return false;
         ROS_INFO("down");
 
-    if(!isLineDetected())return false;
+    if(!isLineDetected(mat_half_))return false;
 
 
     return true;

@@ -4,9 +4,16 @@
     <arg name="event_FPN_file_path" default="$(find slip_detector)/SDK/config/FPN_Optical.txt"/>
     <arg name="frame_FPN_file_path" default="$(find slip_detector)/SDK/config/FPN_2.txt"/>
 
+    <arg name="ROI_top" default="0"/>
+    <arg name="ROI_left" default="0"/>
+    <arg name="ROI_width" default="640"/>
+    <arg name="ROI_height" default="400"/>
+
+    <!-- 两个可选参数，主动获取模式和回调模式 -->
     <arg name="detector_type" default="slip_detector_node_cb"/>
     <!-- <arg name="detector_type" default="slip_detector_node"/> -->
 
+    <!-- 三种检测方法，Event_Off是最快的 -->
     <!-- <arg name="celex_mode" default="Optical_Flow_Mode"/> -->
     <arg name="celex_mode" default="Event_Off_Pixel_Timestamp_Mode"/>
     <!-- <arg name="celex_mode" default="Loop_Mode"/> -->
@@ -19,11 +26,18 @@
         <!-- <remap from="" to=""/> -->
     
         <param name="celex_mode" value="$(arg celex_mode)" />
-        <param name="threshold" value="170" />
-        <param name="clock_rate" value="100" />
+        <param name="threshold" type="int" value="170" />
+        <param name="clock_rate" type="int" value="100" />
 
         <param name="event_FPN_file_path" type="str" value="$(arg event_FPN_file_path)"/>
         <param name="frame_FPN_file_path" type="str" value="$(arg frame_FPN_file_path)"/>
+
+        <param name="ROI_top" type="int" value="$(arg ROI_top)"/>
+        <param name="ROI_left" type="int" value="$(arg ROI_left)"/>
+        <param name="ROI_width" type="int" value="$(arg ROI_width)"/>
+        <param name="ROI_height" type="int" value="$(arg ROI_height)"/>
+
+
     </node>
 
 

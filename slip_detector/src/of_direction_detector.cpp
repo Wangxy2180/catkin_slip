@@ -196,7 +196,7 @@ bool OFDirectionSlipDetector::isOFSlip()
         ret = true;
     }
     // 这一步似乎意义不大，因为基本more了，就slip了
-    if(!isLineDetected())
+    if(!isLineDetected(mat_half_))
     {
         ret = false;
     }

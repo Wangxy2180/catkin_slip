@@ -7,6 +7,7 @@
 #include <celex5/celex5datamanager.h>
 #include <celex5_msgs_sdk/Event.h>
 #include <celex5_msgs_sdk/EventVector.h>
+#include "timer.h"
 
 #define MAT_ROWS 800
 #define MAT_COLS 1280
@@ -21,12 +22,20 @@ public:
     bool run();
     void slipPublish(std_msgs::String& msg);
     int getEnvWindowNum(int num);
-    bool isLineDetected();
+    bool isLineDetected(cv::Mat& mat_hough);
+    bool isCornerDetected(cv::Mat& mat_corner);
+
+
     bool updateEventWindow(int data_size);
+    uint64_t get_cur_off_time_from_zero();
+    void set_cur_off_time_from_zero(int a);
 
 
     virtual bool isSlipped()=0;
     virtual bool initEventWindow()=0;
+
+    Stopwatch timer_;
+
 
 private:
     bool isRunning=false;
@@ -48,7 +57,11 @@ protected:
     Eigen::Array<int, 10, 1> env_window_;
     celex5_msgs_sdk::EventVector event_vector_;
     cv::Mat mat_half_;
+    std::vector<int> ROI_area_;
 
+    // off_pixel_time zero time
+    uint64_t off_time_zero_;
+    uint64_t cur_off_time_from_zero_;
 
 };
 

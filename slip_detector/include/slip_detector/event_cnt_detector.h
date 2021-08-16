@@ -59,10 +59,11 @@ public:
     bool isSlipEventSize();
     bool isSlipEventLen();
     bool grabEventData(CeleX5 *celex, celex5_msgs_sdk::EventVector &msg);
-    bool grabEventDataSize(CeleX5 *celex);
+    bool grabEventDataSizeROI(CeleX5 *celex, celex5_msgs_sdk::EventVector &msg);
     // bool updateEventWindow(int data_size);
 
 private:
+    cv::Mat mat_ROI_;
 
         // private ROS node handle
     // ros::NodeHandle node_;

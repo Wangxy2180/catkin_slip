@@ -20,7 +20,7 @@ callback 方式，
 Event_Off_Pixel_Timstamp_Mode
 
 ```bash
-roslaunch slip_detector slip_detector.launch detector_type:=slip_detector_node_cb celex_mode:=Event_Off_Pixel_Timstamp_Mode
+roslaunch slip_detector slip_detector.launch detector_type:=slip_detector_node_cb celex_mode:=Event_Off_Pixel_Timestamp_Mode
 ```
 
 Optical_Flow_Mode
@@ -47,12 +47,21 @@ roslaunch slip_detector slip_detector.launch detector_type:=slip_detector_node_c
 
 # 存在的问题
 
-1. Loop_Mode和Optical_Flow_Mode下，连续产生大量事件，就会`generate_image: buffer is full!`，还未解决，不过普通的滑动检测场景可能也遇不到。
-2. 不知道为啥，明明设置了光流的帧时间，但是频率一直都是50Hz左右，似乎设置完没有起作用
-3. 主动获取模式，`Event_Off_Pixel_Timestamp_Mode`下，事件一多，绝对会崩，其他不保证。
-4. FPN的path还没设置，不过问题不大，似乎也用不到这玩意。
-5. `Event_Off_Pixel_Timstamp_Mode`太敏感了，可能会一下产生好多滑动信号，也许需要再判断一下。
-6. 由于我的实验环境有限，无法完美模拟滑动场景，有些参数可能不太合适。阈值的计算方式在`updateEventWindow`中，用大小为10的滚动窗口的事件数量均值乘一个缩放参数(当前设置2.5)。
+- [ ] Loop_Mode和Optical_Flow_Mode下，连续产生大量事件，就会`generate_image: buffer is full!`，还未解决，不过普通的滑动检测场景可能也遇不到。
+
+- [x] 不知道为啥，明明设置了光流的帧时间，但是频率一直都是50Hz左右，似乎设置完没有起作用
+
+>因为范围是(10,180), cb:20：47Hz；11：56Hz ，主被动都会buffer is full，再试一试
+
+- [ ] 主动获取模式，`Event_Off_Pixel_Timestamp_Mode`下，事件一多，绝对会崩，其他不保证。
+
+- [ ] FPN的path还没设置，不过问题不大，似乎也用不到这玩意。
+
+- [ ] `Event_Off_Pixel_Timstamp_Mode`太敏感了，可能会一下产生好多滑动信号，也许需要再判断一下。
+
+- [ ] 由于我的实验环境有限，无法完美模拟滑动场景，有些参数可能不太合适。阈值的计算方式在`updateEventWindow`中，用大小为10的滚动窗口的事件数量均值乘一个缩放参数(当前设置2.5)。
+- [ ] 时间戳计算出问题了，获取的当前包的外部时间戳总是比now快
+- [ ] hough变换太费时间了，不加，1ms内解决，加了基本上10ms
 
 
 

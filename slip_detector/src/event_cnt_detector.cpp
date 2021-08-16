@@ -7,6 +7,10 @@ namespace celex_ros
 EventCntSlipDetector::EventCntSlipDetector()
 {
     detector_name="event_cnt";
+    // 用size和直接输入，是相反的Size(宽 高)
+    // Size(col, row)
+    mat_ROI_ = cv::Mat::zeros(cv::Size(ROI_area_[2], ROI_area_[3]), CV_8UC1);
+    std::cout<<mat_ROI_.size();
     // mat_half_ = cv::Mat::zeros(cv::Size(MAT_COLS/2, MAT_ROWS/2), CV_8UC1);
 }
 
@@ -34,14 +38,15 @@ bool EventCntSlipDetector::grabEventData(
         {
               mat_half_.at<uchar>((MAT_ROWS - vecEvent[i].row - 1)/2,
                             (MAT_COLS - vecEvent[i].col - 1)/2) = 255;
+                            // 写的什么玩意
             event_.x = vecEvent[i].row;
             event_.y = vecEvent[i].col;
             event_.brightness = 255;
             event_.off_pixel_timestamp = vecEvent[i].tOffPixelIncreasing;
             msg.events.push_back(event_);
         }
-        
-
+        // std::cout<<event_.off_pixel_timestamp<<std::endl;;
+        // ROS_INFO("time:%ld",event_.off_pixel_timestamp);
     }
     else
     {
@@ -49,20 +54,59 @@ bool EventCntSlipDetector::grabEventData(
         std::cout << "This mode has no event data. " << std::endl;
         return false;
     }
-
     return true;
 }
 
-bool EventCntSlipDetector::grabEventDataSize(CeleX5 *celex)
+bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::EventVector &msg)
 {
     if (celex->getSensorFixedMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode)
     {
         std::vector<EventData> vecEvent;
-        // ROS_INFO("123");
         celex->getEventDataVector(vecEvent);
-        // ROS_INFO("456");
+        if(off_time_zero_==-99 && vecEvent[0].tOffPixelIncreasing != 0)
+        {
+            auto zero_time =std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+            off_time_zero_= static_cast<uint64_t>(zero_time) -  vecEvent[0].tOffPixelIncreasing;
+            ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
+            ROS_INFO("off_time_zero is %f s",off_time_zero_/1000000.0);
+        }
         int data_size = vecEvent.size();
-        if(!updateEventWindow(data_size))return false;
+        cur_off_time_from_zero_ = off_time_zero_+vecEvent[0].tOffPixelIncreasing;
+            // ROS_INFO("1 off_time_zero is %ld us",off_time_zero_);
+            // ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
+            // ROS_INFO("3 cur_off_time is %ld ns",cur_off_time_from_zero_);
+        
+        celex5_msgs_sdk::Event event_;
+        int ROI_data_size = 0;
+
+        mat_ROI_ = cv::Mat::zeros(cv::Size(ROI_area_[2], ROI_area_[3]), CV_8UC1);
+
+        for(int i = 0;i<data_size;++i)
+        {
+            if(ROI_area_[0]<=vecEvent[i].row && vecEvent[i].row < ROI_area_[0]+ROI_area_[3]-1)
+            {
+                if(ROI_area_[1]<=vecEvent[i].col && vecEvent[i].col < ROI_area_[1]+ROI_area_[2]-1)
+                {
+                    ROI_data_size++;
+                    // mat_ROI_.at<uchar>(ROI_area_[3]-(vecEvent[i].row - ROI_area_[0])-1,ROI_area_[2]-(vecEvent[i].col - ROI_area_[1])-1) = 255;
+                    // 下边这样和人眼看到的是一样的
+                    mat_ROI_.at<uchar>(ROI_area_[3]-(vecEvent[i].row - ROI_area_[0])-1,(vecEvent[i].col - ROI_area_[1])) = 255;
+                    // 下边的用不上，有这张图就够了，不需要把他包起来
+                    // event_.y = vecEvent[i].row;
+                    // event_.x = vecEvent[i].col;
+                    // event_.brightness = 255;
+                    // event_.off_pixel_timestamp = vecEvent[i].tOffPixelIncreasing;
+                    // msg.events.push_back(event_);
+                    // std::cout<<"row,col"<<vecEvent[i].row<<","<<vecEvent[i].col<<std::endl;
+                }
+            }
+        }
+        // cv::imshow("123",mat_ROI_);
+        // cv::waitKey(1);
+        
+        // 其实这里是有问题的，这时的阈值无法代表前一状态
+        // if(!updateEventWindow(data_size))return false;
+        if(!updateEventWindow(ROI_data_size))return false;
         return true;
     }
     return false;
@@ -88,31 +132,20 @@ bool EventCntSlipDetector::getDataFromCeleX()
 bool EventCntSlipDetector::isSlipped()
 {
     // if(isSlipEventLen())
-    if(isSlipEventSize())
-    {
-        return true;
-    }
-    return false;
+    if(!isSlipEventSize())return false;
+    if(!isLineDetected(mat_ROI_))return false;
+    return true;
 }
 
 bool EventCntSlipDetector::initEventWindow()
 {
     while(env_window_(0)==0)
     {
-        grabEventDataSize(celex_);
+        grabEventDataSizeROI(celex_, event_vector_);
     }
     return true;
 }
 
-// bool EventCntSlipDetector::updateEventWindow(int data_size)
-// {
-//     if(data_size<50)return false;
-//     if(data_size==env_window_(9))return false;
-//     env_window_.topRows<10-1>()=env_window_.bottomRows<10-1>();
-//     env_window_(env_window_.size()-1)=data_size;
-//     dynamic_threshold_=(env_window_.sum()/env_window_.size())*dynamic_threshold_scale_;
-//     return true;
-// }
 
 
 
@@ -134,10 +167,10 @@ bool EventCntSlipDetector::isSlipEventLen()
         ROS_INFO("more");
     }
 
-    if(!isLineDetected())
-    {
-        ret = false;
-    }
+    // if(!isLineDetected())
+    // {
+    //     ret = false;
+    // }
 
     event_vector_.events.clear();
     return ret;
@@ -146,7 +179,7 @@ bool EventCntSlipDetector::isSlipEventLen()
 bool EventCntSlipDetector::isSlipEventSize()
 {
     // ROS_INFO("123");
-    if(!grabEventDataSize(celex_))return false;
+    if(!grabEventDataSizeROI(celex_,event_vector_))return false;
     // ROS_INFO("456");
     if (env_window_(9) > dynamic_threshold_)
     {

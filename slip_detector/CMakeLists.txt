@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(slip_detector)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-# add_compile_options(-std=c++11)
+add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -40,14 +40,23 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
 )
 
+#########################third party version################################
+# set(CeleX5 ${CMAKE_SOURCE_DIR}/slip_detector/SDK)
+# set(CeleX_LIB CeleX5)
+
+# include_directories(${CeleX5}/include)
+# link_directories(${CeleX5}/lib/Linux/x64)
+##########################################################
+
+##########################Official version#################################
 set(CeleX ${CMAKE_SOURCE_DIR}/slip_detector/SDK)
 set(CeleX_LIB CeleX)
 
 include_directories(${CeleX}/include)
 link_directories(${CeleX}/lib/Linux/x64)
+########################################################
 
-#include_directories(${CeleX}/include)
-#link_directories(${CeleX}/lib/Linux/x64)
+
 
 # add_library(${PROJECT_NAME} src/slip_detector_ros.cpp)
 # target_link_libraries(${PROJECT_NAME}
