@@ -16,46 +16,17 @@ EventCntSlipDetector::EventCntSlipDetector()
 
 EventCntSlipDetector::~EventCntSlipDetector(){ROS_INFO("--end EventCntSlipDetector--");}
 
-bool EventCntSlipDetector::grabEventData(
-    CeleX5 *celex,
-    celex5_msgs_sdk::EventVector &msg)
+bool EventCntSlipDetector::isSlipped()
 {
-    celex5_msgs_sdk::Event event_;
-     if (celex->getSensorFixedMode() == CeleX5::Event_Off_Pixel_Timestamp_Mode)
-    {
-        std::vector<EventData> vecEvent;
-
-        celex->getEventDataVector(vecEvent);
-
-        int dataSize = vecEvent.size();
-        // msg.vectorIndex = 0;
-        msg.height = MAT_ROWS;
-        msg.width = MAT_COLS;
-        msg.vector_length = dataSize;
-        if(!updateEventWindow(dataSize))return false;
-
-        for (int i = 0; i < dataSize; i++)
-        {
-              mat_half_.at<uchar>((MAT_ROWS - vecEvent[i].row - 1)/2,
-                            (MAT_COLS - vecEvent[i].col - 1)/2) = 255;
-                            // 写的什么玩意
-            event_.x = vecEvent[i].row;
-            event_.y = vecEvent[i].col;
-            event_.brightness = 255;
-            event_.off_pixel_timestamp = vecEvent[i].tOffPixelIncreasing;
-            msg.events.push_back(event_);
-        }
-        // std::cout<<event_.off_pixel_timestamp<<std::endl;;
-        // ROS_INFO("time:%ld",event_.off_pixel_timestamp);
-    }
-    else
-    {
-        msg.vector_length = 0;
-        std::cout << "This mode has no event data. " << std::endl;
-        return false;
-    }
+    // if(isSlipEventLen())
+    if(!isSlipEventSizeROI())return false;
+    // ROS_INFO("more--");
+    // 线检测很费时间，不推荐
+    // if(!isLineDetected(mat_ROI_))return false;
+    if(!isCornerDetected(mat_ROI_))return false;
     return true;
 }
+
 
 bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::EventVector &msg)
 {
@@ -67,20 +38,18 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
         {
             auto zero_time =std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
             off_time_zero_= static_cast<uint64_t>(zero_time) -  vecEvent[0].tOffPixelIncreasing;
-            ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
+            // ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
             ROS_INFO("off_time_zero is %f s",off_time_zero_/1000000.0);
         }
+        // cur_off_time_from_zero_ = off_time_zero_+vecEvent[0].tOffPixelIncreasing;
+        // ROS_INFO("1 off_time_zero is %ld us",off_time_zero_);
+        // ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
+        // ROS_INFO("3 cur_off_time is %ld ns",cur_off_time_from_zero_);
         int data_size = vecEvent.size();
-        cur_off_time_from_zero_ = off_time_zero_+vecEvent[0].tOffPixelIncreasing;
-            // ROS_INFO("1 off_time_zero is %ld us",off_time_zero_);
-            // ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
-            // ROS_INFO("3 cur_off_time is %ld ns",cur_off_time_from_zero_);
-        
-        celex5_msgs_sdk::Event event_;
-        int ROI_data_size = 0;
 
         mat_ROI_ = cv::Mat::zeros(cv::Size(ROI_area_[2], ROI_area_[3]), CV_8UC1);
-
+        
+        int ROI_data_size = 0;
         for(int i = 0;i<data_size;++i)
         {
             if(ROI_area_[0]<=vecEvent[i].row && vecEvent[i].row < ROI_area_[0]+ROI_area_[3]-1)
@@ -109,33 +78,29 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
         if(!updateEventWindow(ROI_data_size))return false;
         return true;
     }
+    ROS_INFO("---------------------------");
     return false;
 }
 
-bool EventCntSlipDetector::getDataFromCeleX()
+bool EventCntSlipDetector::isSlipEventSizeROI()
 {
-    grabEventData(celex_, event_vector_);
-
-    // grabEventDataSize(celex_);
-
-    // data_pub_.publish(event_vector_);
-    event_vector_.events.clear();
-    // get sensor image and publish it
-    // cv::Mat image = celex_->getEventPicMat(CeleX5::EventBinaryPic);
-    // sensor_msgs::ImagePtr msg =
-    //     cv_bridge::CvImage(std_msgs::Header(), "mono8", image).toImageMsg();
-    // image_pub_.publish(msg);
-    // return false;
-    return true;
+    if(!grabEventDataSizeROI(celex_,event_vector_))return false;
+    // 为了更新角点阈值
+    isCornerDetected(mat_ROI_);
+    if(env_window_(0)!=0 && cor_window_(0)==0 )
+    {
+        isCornerDetected(mat_ROI_);
+        // ROS_INFO("-----------------------%d",cor_threshold_);
+        return false;
+    }
+    if (env_window_(envWindowSize-1) > dynamic_threshold_)
+    {
+        // ROS_INFO("threshold is:%d",dynamic_threshold_);
+        return true;
+    }
+    return false;
 }
 
-bool EventCntSlipDetector::isSlipped()
-{
-    // if(isSlipEventLen())
-    if(!isSlipEventSize())return false;
-    if(!isLineDetected(mat_ROI_))return false;
-    return true;
-}
 
 bool EventCntSlipDetector::initEventWindow()
 {
@@ -144,48 +109,6 @@ bool EventCntSlipDetector::initEventWindow()
         grabEventDataSizeROI(celex_, event_vector_);
     }
     return true;
-}
-
-
-
-
-bool EventCntSlipDetector::isSlipEventLen()
-{
-    bool ret=false;
-    // ROS_INFO("123");
-
-    if(!grabEventData(celex_, event_vector_))
-    {
-        event_vector_.events.clear();
-        return false;
-    }
-    // ROS_INFO("456");
-
-    if (event_vector_.vector_length > dynamic_threshold_)
-    {
-        ret = true;
-        ROS_INFO("more");
-    }
-
-    // if(!isLineDetected())
-    // {
-    //     ret = false;
-    // }
-
-    event_vector_.events.clear();
-    return ret;
-}
-
-bool EventCntSlipDetector::isSlipEventSize()
-{
-    // ROS_INFO("123");
-    if(!grabEventDataSizeROI(celex_,event_vector_))return false;
-    // ROS_INFO("456");
-    if (env_window_(9) > dynamic_threshold_)
-    {
-        return true;
-    }
-    return false;
 }
 
 }

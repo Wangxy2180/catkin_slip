@@ -5,7 +5,6 @@ namespace celex_ros{
 OFDirectionSlipDetector::OFDirectionSlipDetector(/* args */)
 {
     detector_name = "of_direction";
-    // OF_buffer=std::make_shared<uint8_t>(1280*800);
     OF_buffer=new uint8_t[CELEX5_PIXELS_NUMBER];
     memset(OF_buffer,0,CELEX5_PIXELS_NUMBER);
 }
@@ -61,15 +60,6 @@ bool OFDirectionSlipDetector::initEventWindow()
     return true;
 }
 
-// bool OFDirectionSlipDetector::updateEventWindow(int data_size)
-// {
-//     if(data_size<50)return false;
-//     if(data_size==env_window_(9))return false;
-//     env_window_.topRows<10-1>()=env_window_.bottomRows<10-1>();
-//     env_window_(env_window_.size()-1)=data_size;
-//     dynamic_threshold_=(env_window_.sum()/env_window_.size())*dynamic_threshold_scale_;
-//     return true;
-// }
 
 bool OFDirectionSlipDetector::getOFDirection(uint8_t* OF_buffer)
 {

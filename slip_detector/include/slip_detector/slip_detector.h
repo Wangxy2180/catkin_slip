@@ -27,8 +27,14 @@ public:
 
 
     bool updateEventWindow(int data_size);
+    bool updateCorWindow(int cor_cnt);
     uint64_t get_cur_off_time_from_zero();
     void set_cur_off_time_from_zero(int a);
+
+    void set_slip_cnt(int cnt);
+    int  get_slip_cnt();
+
+    int get_max_slip_cnt();
 
 
     virtual bool isSlipped()=0;
@@ -39,47 +45,47 @@ public:
 
 private:
     bool isRunning=false;
-    ros::Publisher event_pub_, image_pub_;
-    // ros::Subscriber data_sub_;
+    // ros::Publisher event_pub_, image_pub_;
 
     std::string celex_mode_;
     int threshold_, clock_rate_;
 
+    int max_slip_cnt_;
 
 protected:
+
+    static const int envWindowSize = 11;
+    float dynamic_threshold_scale_;// = 2.5;
+    float cor_threshold_scale_;// = 1.5;
+
     ros::NodeHandle node_;
 
     ros::Publisher slip_pub_;
     int dynamic_threshold_ = -1;
-    float dynamic_threshold_scale_ = 2.5;
+    int cor_threshold_ = -1;
+
+
     std::string detector_name;
     CeleX5 *celex_;
-    Eigen::Array<int, 10, 1> env_window_;
+    Eigen::Array<int, envWindowSize, 1> env_window_;
+    Eigen::Array<int,envWindowSize,1> cor_window_;
+
+
     celex5_msgs_sdk::EventVector event_vector_;
     cv::Mat mat_half_;
     std::vector<int> ROI_area_;
+
+    int continuous_slip_cnt_=0;
+
+
+
+
 
     // off_pixel_time zero time
     uint64_t off_time_zero_;
     uint64_t cur_off_time_from_zero_;
 
 };
-
-// SlipDetector::SlipDetector(/* args */) : node_("~")
-// {
-//     image_pub_ = node_.advertise<sensor_msgs::Image>("celex_image", 1);
-//     event_pub_ = node_.advertise<celex5_msgs_sdk::EventVector>("celex_event", 1);
-//     slip_pub_ = node_.advertise<std_msgs::String>("slip_singal", 1);
-
-//     node_.param<std::string>("celex_mode", celex_mode_,
-//                              "Event_Off_Pixel_Timestamp_Mode");
-//     node_.param<int>("threshold", threshold_, 170);   // 0-1024
-//     node_.param<int>("clock_rate", clock_rate_, 100); // 0-100
-//     ROS_INFO("topic is %s", celex_mode_.c_str());
-
-//     env_noise_.setZero();
-// }
-
 
 
 

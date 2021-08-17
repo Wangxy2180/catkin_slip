@@ -1,29 +1,36 @@
 #include "slip_detector/slip_detector.h"
+#include<typeinfo>
 namespace celex_ros {
 
-SlipDetector::SlipDetector() : node_("~"),off_time_zero_(-99),cur_off_time_from_zero_(0),ROI_area_(4)
+SlipDetector::SlipDetector() : node_("~"),off_time_zero_(-99),cur_off_time_from_zero_(0),ROI_area_(4),max_slip_cnt_(2)
 {
-    image_pub_ = node_.advertise<sensor_msgs::Image>("celex_image", 1);
-    event_pub_ = node_.advertise<celex5_msgs_sdk::EventVector>("celex_event", 1);
+    // image_pub_ = node_.advertise<sensor_msgs::Image>("celex_image", 1);
+    // event_pub_ = node_.advertise<celex5_msgs_sdk::EventVector>("celex_event", 1);
     slip_pub_ = node_.advertise<std_msgs::String>("slip_signal", 1);
-    // data_sub_ =
-            // node_.subscribe("celex5_event", 1, &SlipDetectorRosNode::celexDataCallback, this);
 
     node_.param<std::string>("celex_mode", celex_mode_, "Event_Off_Pixel_Timestamp_Mode");
+    ROS_INFO("mode is %s", celex_mode_.c_str());
+
     node_.param<int>("threshold", threshold_, 170);   // 0-1024
     node_.param<int>("clock_rate", clock_rate_, 100); // 0-100
+
     node_.param<int>("ROI_top",ROI_area_[0],0);
     node_.param<int>("ROI_left",ROI_area_[1],0);
     node_.param<int>("ROI_width",ROI_area_[2],1280);
     node_.param<int>("ROI_height",ROI_area_[3],800);
-    ROS_INFO("mode is %s", celex_mode_.c_str());
+    ROS_INFO("ROI_area is: topLetf(%d, %d); wifth:%d; height:%d.",ROI_area_[0],ROI_area_[1],ROI_area_[2],ROI_area_[3]);
 
-    ROS_INFO("size is %d",ROI_area_.size());
-    for(auto k : ROI_area_)
-    std::cout<<k<<std::endl;
+
+    node_.param<float>("dynamic_threshold_scale",dynamic_threshold_scale_,2.55);
+    node_.param<float>("cor_threshold_scale",cor_threshold_scale_,1.55);
+    // std::cout<<"dynamic_threshold_scale_ is:"<<dynamic_threshold_scale_<<"; cor_threshold_scale_: "<<cor_threshold_scale_<<std::endl;
+
+    node_.param<int>("max_slip_cnt",max_slip_cnt_,2);
 
     mat_half_ = cv::Mat::zeros(cv::Size(MAT_COLS/2, MAT_ROWS/2), CV_8UC1);
     env_window_.setZero();
+    cor_window_.setZero();
+
 }
 
 SlipDetector::~SlipDetector(){ROS_INFO("--end SlipDetector--");}
@@ -36,9 +43,11 @@ void SlipDetector::setCeleX5(CeleX5 *pcelex)
     CeleX5::CeleX5Mode mode;
     if (celex_mode_ == "Event_Off_Pixel_Timestamp_Mode")
     {
+        int event_frame_time=1000;
+        node_.param<int>("event_frame_time",event_frame_time,1000);
         mode = CeleX5::Event_Off_Pixel_Timestamp_Mode;
         celex_->setSensorFixedMode(mode);
-        celex_->setEventFrameTime(1000);
+        celex_->setEventFrameTime(event_frame_time);
         celex_->disableFrameModule();
     }
     else if (celex_mode_ == "Optical_Flow_Mode")
@@ -98,10 +107,13 @@ int SlipDetector::getEnvWindowNum(int num)
 
 bool SlipDetector::isCornerDetected(cv::Mat& mat_corner)
 {
-    std::vector<KeyPoint> keypoints;
-    Ptr<FastFeatureDetector> fast_detector = FastFeatureDetector::create();
-    detector->detect(mat_corner,keypoints);
-    if(keypoints.size()>0)return true;
+    std::vector<cv::KeyPoint> keypoints;
+    cv::Ptr<cv::FastFeatureDetector> fast_detector = cv::FastFeatureDetector::create();
+    fast_detector->detect(mat_corner,keypoints);
+    // ROS_INFO("corner num is:%d",keypoints.size());
+    // 这里就不应该随便更新，否则会导致角点数量过多
+    if(env_window_(0)!=0 && cor_window_(0)==0)updateCorWindow(keypoints.size());
+    if(keypoints.size()>cor_threshold_)return true;
     return false;
 }
 
@@ -118,21 +130,35 @@ bool SlipDetector::isLineDetected(cv::Mat& mat_hough)
     // mat_hough = cv::Mat::zeros(cv::Size(mat_hough.cols,mat_hough.rows),CV_8UC1);
     ROS_INFO("line size is:%d",lines.size());
     
-
     if(lines.size()>0)return true;
     return false;
 }
 
 bool SlipDetector::updateEventWindow(int data_size)
 {
-    if(data_size<50)return false;
-    if(data_size==env_window_(9))return false;
-    env_window_.topRows<10-1>()=env_window_.bottomRows<10-1>();
+    // 这个值可以考虑修改一下
+    if(data_size<25)return false;
+    if(data_size==env_window_(envWindowSize-1))return false;
+    env_window_.topRows<envWindowSize-1>()=env_window_.bottomRows<envWindowSize-1>();
     env_window_(env_window_.size()-1)=data_size;
-    dynamic_threshold_=(env_window_.sum()/env_window_.size())*dynamic_threshold_scale_;
+    // 这里改成了11个大小的，其中前10个用来计算阈值，第11个是最新的
+    // dynamic_threshold_=((env_window_.sum()-env_window_(envWindowSize-1))/(env_window_.size()-1))*dynamic_threshold_scale_;
+    dynamic_threshold_ =(env_window_.topRows<envWindowSize-1>().sum()/(env_window_.size()-1))*dynamic_threshold_scale_;
     return true;
 }
 
+// 其实这两个函数可以合并的
+bool SlipDetector::updateCorWindow(int cor_cnt)
+{
+    if(cor_cnt<100)return false;
+    if(cor_cnt==cor_window_(envWindowSize-1))return false;
+    cor_window_.topRows<envWindowSize-1>()=cor_window_.bottomRows<envWindowSize-1>();
+    cor_window_(cor_window_.size()-1)=cor_cnt;
+    // 这里改成了11个大小的，其中前10个用来计算阈值，第11个是最新的
+    cor_threshold_ =(cor_window_.topRows<envWindowSize-1>().sum()/(cor_window_.size()-1))*cor_threshold_scale_;
+    // ROS_INFO("corner_threshold %d",cor_threshold_);
+    return true;
+}
 
 
 bool SlipDetector::run()
@@ -140,7 +166,7 @@ bool SlipDetector::run()
     isRunning=true;
     ros::Rate loop_rate(1000);
     initEventWindow();
-        ROS_INFO("init done");
+    ROS_INFO("init done");
 
 
     while (node_.ok() && isRunning)
@@ -161,6 +187,11 @@ bool SlipDetector::run()
     }
     return true;
 }
+
+
+void SlipDetector::set_slip_cnt(int cnt){continuous_slip_cnt_=cnt;}
+int SlipDetector::get_slip_cnt(){return continuous_slip_cnt_;}
+int SlipDetector::get_max_slip_cnt(){return max_slip_cnt_;}
 
 // void SlipDetector::run()
 // {

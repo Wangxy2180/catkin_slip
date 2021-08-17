@@ -1,13 +1,26 @@
 <launch>
 
-
     <arg name="event_FPN_file_path" default="$(find slip_detector)/SDK/config/FPN_Optical.txt"/>
     <arg name="frame_FPN_file_path" default="$(find slip_detector)/SDK/config/FPN_2.txt"/>
 
+<!-- ##################可调阈值部分############################## -->
+    <!-- ROI,分别是左上角坐标以及宽高，这个值好像是反的 -->
     <arg name="ROI_top" default="0"/>
     <arg name="ROI_left" default="0"/>
-    <arg name="ROI_width" default="640"/>
-    <arg name="ROI_height" default="400"/>
+    <arg name="ROI_width" default="1280"/>
+    <arg name="ROI_height" default="800"/>
+
+    <!-- 两个阈值缩放参数，角点这个阈值似乎没啥用 -->
+    <arg name="dynamic_threshold_scale" default="1.65"/>
+    <arg name="cor_threshold_scale" default="1.5"/>
+
+    <!-- 允许的最大连续滑动次数，超过此就不再publish，如果希望所有滑动都报告，那就调大一点 -->，
+    <arg name="max_slip_cnt" default="2"/>
+
+    <!-- celex 参数 -->
+    <arg name="event_frame_time" default="1000"/>
+<!-- ########################################################## -->
+    
 
     <!-- 两个可选参数，主动获取模式和回调模式 -->
     <arg name="detector_type" default="slip_detector_node_cb"/>
@@ -24,7 +37,8 @@
     <node pkg="slip_detector" type="$(arg detector_type)" name="celex5_slip_detector" output="screen">
         <!-- <remap from="" to=""/> -->
         <!-- <remap from="" to=""/> -->
-    
+
+        <param name="event_frame_time" type="int" value="$(arg event_frame_time)"/>
         <param name="celex_mode" value="$(arg celex_mode)" />
         <param name="threshold" type="int" value="170" />
         <param name="clock_rate" type="int" value="100" />
@@ -36,6 +50,11 @@
         <param name="ROI_left" type="int" value="$(arg ROI_left)"/>
         <param name="ROI_width" type="int" value="$(arg ROI_width)"/>
         <param name="ROI_height" type="int" value="$(arg ROI_height)"/>
+
+        <param name="dynamic_threshold_scale" type="double" value="$(arg dynamic_threshold_scale)" />
+        <param name="cor_threshold_scale" type="double" value="$(arg cor_threshold_scale)" />
+
+        <param name="max_slip_cnt" type="int" value="$(arg max_slip_cnt)"/>
 
 
     </node>
