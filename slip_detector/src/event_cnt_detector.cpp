@@ -18,7 +18,6 @@ EventCntSlipDetector::~EventCntSlipDetector(){ROS_INFO("--end EventCntSlipDetect
 
 bool EventCntSlipDetector::isSlipped()
 {
-    // if(isSlipEventLen())
     if(!isSlipEventSizeROI())return false;
     // ROS_INFO("more--");
     // 线检测很费时间，不推荐
@@ -45,6 +44,9 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
         // ROS_INFO("1 off_time_zero is %ld us",off_time_zero_);
         // ROS_INFO("2 vec is %ld us",vecEvent[0].tOffPixelIncreasing);
         // ROS_INFO("3 cur_off_time is %ld ns",cur_off_time_from_zero_);
+
+        if(vecEvent[0].tOffPixelIncreasing<5000000)return false;
+
         int data_size = vecEvent.size();
 
         mat_ROI_ = cv::Mat::zeros(cv::Size(ROI_area_[2], ROI_area_[3]), CV_8UC1);
@@ -70,9 +72,18 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
                 }
             }
         }
-        // cv::imshow("123",mat_ROI_);
+        // cv::imshow("ROI_show",mat_ROI_);
         // cv::waitKey(1);
-        
+        // ROS_INFO("event cnt : %d",ROI_data_size);
+        // 为了统计环境事件数量的均值
+        if(isInitThresTest_)
+        {
+            event_cnt_sss++;
+            event_total+=ROI_data_size;
+            event_avg_num=event_total/event_cnt_sss;
+            ROS_INFO("avg_event_num is : %d",event_avg_num);
+        }
+
         // 其实这里是有问题的，这时的阈值无法代表前一状态
         // if(!updateEventWindow(data_size))return false;
         if(!updateEventWindow(ROI_data_size))return false;
@@ -85,17 +96,19 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
 bool EventCntSlipDetector::isSlipEventSizeROI()
 {
     if(!grabEventDataSizeROI(celex_,event_vector_))return false;
-    // 为了更新角点阈值
-    isCornerDetected(mat_ROI_);
-    if(env_window_(0)!=0 && cor_window_(0)==0 )
+    // 为了测试环境阈值
+    if(isInitThresTest_){isCornerDetected(mat_ROI_);}
+    // 为了初始化更新角点阈值
+    if(/*env_window_(0)!=0 &&*/ cor_window_(0)==0 )
     {
         isCornerDetected(mat_ROI_);
         // ROS_INFO("-----------------------%d",cor_threshold_);
         return false;
     }
+    // 判断事件数量超出阈值了吗
     if (env_window_(envWindowSize-1) > dynamic_threshold_)
     {
-        // ROS_INFO("threshold is:%d",dynamic_threshold_);
+        // ROS_INFO("%dthreshold is:%d",env_window_(envWindowSize-1),dynamic_threshold_);
         return true;
     }
     return false;

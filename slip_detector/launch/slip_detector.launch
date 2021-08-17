@@ -10,15 +10,21 @@
     <arg name="ROI_width" default="1280"/>
     <arg name="ROI_height" default="800"/>
 
-    <!-- 两个阈值缩放参数，角点这个阈值似乎没啥用 -->
-    <arg name="dynamic_threshold_scale" default="1.65"/>
-    <arg name="cor_threshold_scale" default="1.5"/>
+    <!-- 两个阈值缩放参数，似乎这个角点阈值似乎没啥用 -->
+    <arg name="dynamic_threshold_scale" default="1.66"/>
+    <arg name="cor_threshold_scale" default="1.7"/>
 
     <!-- 允许的最大连续滑动次数，超过此就不再publish，如果希望所有滑动都报告，那就调大一点 -->，
     <arg name="max_slip_cnt" default="2"/>
 
-    <!-- celex 参数 -->
+    <!-- celex参数 略微调大能够检测较为平缓的滑动，但效果并不明显，记得不要超过5000us -->
     <arg name="event_frame_time" default="1000"/>
+
+    <!-- 有点用的小东西 -->
+    <!-- 进行静态场景阈值设定，下边的default值是根据我的场景得出的，如果修改了ROI，记得重新计算，然后设定一下-->
+    <arg name="isInitThresTest" default="false"/>
+    <arg name="cor_init_threshold" default="160"/>
+    <arg name="event_init_threshold" default="240"/>
 <!-- ########################################################## -->
     
 
@@ -56,8 +62,11 @@
 
         <param name="max_slip_cnt" type="int" value="$(arg max_slip_cnt)"/>
 
+        <param name="isInitThresTest" type="bool" value="$(arg isInitThresTest)"/>
+        <param name="cor_init_threshold" type="int" value="$(arg cor_init_threshold)"/>
+        <param name="event_init_threshold" type="int" value="$(arg event_init_threshold)"/>
+
 
     </node>
-
 
 </launch>

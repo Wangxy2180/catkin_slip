@@ -22,6 +22,7 @@ public:
     bool run();
     void slipPublish(std_msgs::String& msg);
     int getEnvWindowNum(int num);
+    int getCorWindowNum(int num);
     bool isLineDetected(cv::Mat& mat_hough);
     bool isCornerDetected(cv::Mat& mat_corner);
 
@@ -75,7 +76,19 @@ protected:
     cv::Mat mat_half_;
     std::vector<int> ROI_area_;
 
-    int continuous_slip_cnt_=0;
+    int continuous_slip_cnt_;
+
+    int event_avg_num=0;
+    int event_total=0;
+    int event_cnt_sss=0;
+
+    int cor_avg_num=0;
+    int cor_total=0;
+    int cor_cnt_sss=0;
+
+    bool isInitThresTest_;
+    int cor_init_threshold_;
+    int event_init_threshold_;
 
 
 

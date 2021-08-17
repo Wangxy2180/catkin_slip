@@ -9,7 +9,6 @@
 
 #include "slip_detector/slip_detector_ros_node_cb.h"
 
-static const std::string OPENCV_WINDOW = "Image window";
 namespace celex_ros_cb
 {
 
@@ -49,8 +48,8 @@ namespace celex_ros_cb
         if (detector->isSlipped())
         {
             detector->set_slip_cnt(detector->get_slip_cnt() + 1);
-            // for init
-            if (0 != detector->getEnvWindowNum(0))
+            // 确保初始化完成
+            if (0 != detector->getEnvWindowNum(0) && 0!=detector->getCorWindowNum(0))
             {
                 // std::cout<<detector->get_slip_cnt()<<std::endl;
                 if (detector->get_slip_cnt() > detector->get_max_slip_cnt())
@@ -73,8 +72,8 @@ namespace celex_ros_cb
         else
             detector->set_slip_cnt(0);
         // detector->set_cur_off_time_from_zero(0);
-        std_msgs::String msggg;
-        msggg.data = "123123123";
+        // std_msgs::String msggg;
+        // msggg.data = "123123123";
         // detector->slipPublish(msggg);
     }
 
