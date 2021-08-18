@@ -20,6 +20,7 @@ bool EventCntSlipDetector::isSlipped()
 {
     if(!isSlipEventSizeROI())return false;
     // ROS_INFO("more--");
+    // 下边的两种特征检测方法，二选一
     // 线检测很费时间，不推荐
     // if(!isLineDetected(mat_ROI_))return false;
     if(!isCornerDetected(mat_ROI_))return false;

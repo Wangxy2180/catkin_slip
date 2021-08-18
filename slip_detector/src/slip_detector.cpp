@@ -141,14 +141,14 @@ bool SlipDetector::isLineDetected(cv::Mat& mat_hough)
 {
     
     std::vector<cv::Vec2f> lines;
-    cv::HoughLines(mat_hough,lines,1.0,CV_PI/180,102);
+    cv::HoughLines(mat_hough,lines,1.0,CV_PI/180,20);
     // cv::imshow("123",mat_half_);
     // cv::waitKey(1);
     // 这里置0没卵用，因为不一定走这里
     mat_half_ = cv::Mat::zeros(cv::Size(MAT_COLS/2, MAT_ROWS/2), CV_8UC1);
     // std::cout<<"clos rows"<<mat_hough.cols<<","<<mat_hough.rows<<std::endl;
     // mat_hough = cv::Mat::zeros(cv::Size(mat_hough.cols,mat_hough.rows),CV_8UC1);
-    ROS_INFO("line size is:%d",lines.size());
+    // ROS_INFO("line size is:%d",lines.size());
     
     if(lines.size()>0)return true;
     return false;

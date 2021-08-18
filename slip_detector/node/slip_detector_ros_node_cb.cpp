@@ -83,7 +83,7 @@ namespace celex_ros_cb
         // detector->set_cur_off_time_from_zero(0);
         std_msgs::String msggg;
         msggg.data = "123123123";
-        detector->slipPublish(msggg);
+        // detector->slipPublish(msggg);
     }
 
 }
