@@ -64,7 +64,11 @@ roslaunch slip_detector slip_detector.launch detector_type:=slip_detector_node_c
 
 # 存在的问题
 
-- [ ] 总是会在最开始的时候检测到一个莫名其妙的滑动，可能还是对事件和角点更新阈值多次取值求平均更合适一点
+- [ ] 为什么！！！为什么！！！一句小小的if，居然要20ms！！！5ms vs 25ms!!! 不加if(3~4ms)，加了if(24-26ms)，把两个大if搬过来是17-23ms。直接替换for中的值是8 ~10ms，把那两个值的计算过程省略，就正常3 4ms了
+
+- [x] 总是会在最开始的时候检测到一个莫名其妙的滑动，可能还是对事件和角点更新阈值多次取值求平均更合适一点
+
+    > 添加初始化阈值，小于该阈值的一律不采用
 
 - [x] Loop_Mode和Optical_Flow_Mode下，连续产生大量事件，就会`generate_image: buffer is full!`，还未解决，不过普通的滑动检测场景可能也遇不到。
 

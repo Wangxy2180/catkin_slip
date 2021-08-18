@@ -9,6 +9,10 @@
 
 #include "slip_detector/slip_detector_ros_node_cb.h"
 
+int total_num=0;
+int total_ns=0;
+
+
 namespace celex_ros_cb
 {
 
@@ -62,6 +66,11 @@ namespace celex_ros_cb
                 auto elapsed = detector->timer_.toc();
                 ROS_INFO("SLIPPPPPPPPPPPPPPPPPPPPPPPPPING:%fms", elapsed / 1000000.0);
 
+                total_num++;
+                total_ns+=elapsed;
+                ROS_INFO("%d avg detect is %f ms",total_num,(total_ns/total_num)/1000000.0);
+                
+
                 // auto now_time =static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
                 // auto elapsed_2 = -(now_time-detector->get_cur_off_time_from_zero());
                 // ROS_INFO("SLIP %fms",elapsed_2/1000.0);
@@ -79,6 +88,12 @@ namespace celex_ros_cb
 
 }
 
+void stop_exec(int sig_num)
+{
+    std::cout<<"num is:"<<sig_num<<std::endl;
+    exit(0);
+}
+
 int main(int argc, char **argv)
 {
     ros::init(argc, argv, "slip_detector_cb");
@@ -94,6 +109,9 @@ int main(int argc, char **argv)
         ROS_ERROR("open sensor failed!");
     }
 
+    signal(SIGINT,stop_exec);
+
+
     // usleep(10000);
 
     celex_ros_cb::SensorDataObserver *pSensorData = new celex_ros_cb::SensorDataObserver(pCelex_->getSensorDataServer(), pCelex_);
@@ -104,6 +122,5 @@ int main(int argc, char **argv)
     //     usleep(100);//us
     // }
     ros::spin();
-
     return EXIT_SUCCESS;
 }

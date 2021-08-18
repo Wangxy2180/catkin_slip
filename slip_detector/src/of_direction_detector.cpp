@@ -53,10 +53,12 @@ bool OFDirectionSlipDetector::initEventWindow()
         {
             for (int j = 0; j < CELEX5_COL; ++j)
             {
+                if(!isInRangeROI(i,j))continue;
                 if(OF_buffer[i*CELEX5_COL+j]!=0)
                     data_size++;
             }
         }
+        ROS_INFO("========data _size:%d",data_size);
         updateEventWindow(data_size);
     }
     return true;
@@ -71,12 +73,31 @@ bool OFDirectionSlipDetector::getOFDirection(uint8_t* OF_buffer)
     uint32_t dir_count3 = 0; //left
     uint32_t dir_count4 = 0; //up
 
+    // int row_top = ROI_area_[0];
+    // int row_bottom = ROI_area_[0]+ROI_area_[3]-1;
+    // int col_left = ROI_area_[1];
+    // int col_right = ROI_area_[1]+ROI_area_[2]-1;
+
+    // ROS_INFO("top, bot, left, right ,%d,%d,%d,%d",ROI_area_top_,ROI_area_bot_,ROI_area_left_,ROI_area_right_);
+
     int direction = 0;
-    for (int i = 0; i < CELEX5_ROW; ++i)
+    of_timer_.tic();
+    // for (int i = 0; i < CELEX5_ROW; ++i)
+    for (int i = ROI_area_top_; i <= ROI_area_bot_; ++i)
     {
-        for (int j = 0; j < CELEX5_COL; ++j)
+        // for (int j = 0; j < CELEX5_COL; ++j)
+        for (int j = ROI_area_left_; j <= ROI_area_right_; ++j)
         {
-            if(!isInRangeROI(i,j)){ROS_INFO("==============");continue;}
+            // 就是这句,md,啥情况,直接从47Hz到23了 直接25ms
+            // if(!isInRangeROI(i,j)){/*ROS_INFO("==============");*/continue;}
+            // 如果是换成下边，就是17 - 23ms
+            // if(ROI_area_[0]<=i && i <= ROI_area_[0]+ROI_area_[3]-1)
+            // {
+            //     if(ROI_area_[1]<=j && j <= ROI_area_[1]+ROI_area_[2]-1)
+            //     {
+            //         continue;
+            //     }
+            // }
             value = OF_buffer[i*CELEX5_COL+j];
             if (0 == value)
             {
@@ -105,10 +126,14 @@ bool OFDirectionSlipDetector::getOFDirection(uint8_t* OF_buffer)
             }
         }
     }
+    // ROS_INFO("for for time is : %dms",of_timer_.toc()/1000000);
+
     cv::resize(cv::Mat(CELEX5_ROW,CELEX5_COL,CV_8UC1,OF_buffer),mat_half_,cv::Size(CELEX5_COL/2,CELEX5_ROW/2));
     memset(OF_buffer,0,CELEX5_PIXELS_NUMBER);
     int data_size = dir_count1+dir_count2+dir_count3+dir_count4;
     updateEventWindow(data_size);
+    if(env_window_(0)==0){return false;}
+    // ROS_INFO("=============data_size: %d",data_size);
 
     int dir1 = 0;
     int dir2 = 0;
@@ -188,6 +213,7 @@ bool OFDirectionSlipDetector::isOFSlip()
         ROS_INFO("more");
         ret = true;
     }
+    // 下边被注视了了
     // 这一步似乎意义不大，因为基本more了，就slip了
     // if(!isLineDetected(mat_half_))
     // {

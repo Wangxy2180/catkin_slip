@@ -55,6 +55,9 @@ private:
 
     int max_slip_cnt_;
 
+    int slip_total_cnt_;
+    int slip_total_ns_;
+
 protected:
 
     static const int envWindowSize = 11;
@@ -77,6 +80,11 @@ protected:
     celex5_msgs_sdk::EventVector event_vector_;
     cv::Mat mat_half_;
     std::vector<int> ROI_area_;
+
+    int ROI_area_top_;
+    int ROI_area_bot_;
+    int ROI_area_left_;
+    int ROI_area_right_;
 
     int continuous_slip_cnt_;
 

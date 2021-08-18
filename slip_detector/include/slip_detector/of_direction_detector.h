@@ -22,6 +22,7 @@ public:
     private:
     // std::shared_ptr<uint8_t> OF_buffer;
     uint8_t* OF_buffer;
+    Stopwatch of_timer_;
     /* data */
 };
 

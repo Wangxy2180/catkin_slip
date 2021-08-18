@@ -2,7 +2,8 @@
 #include<typeinfo>
 namespace celex_ros {
 
-SlipDetector::SlipDetector() : node_("~"),off_time_zero_(-99),cur_off_time_from_zero_(0),ROI_area_(4),max_slip_cnt_(2),continuous_slip_cnt_(0)
+SlipDetector::SlipDetector() : node_("~"),off_time_zero_(-99),cur_off_time_from_zero_(0),ROI_area_(4),
+max_slip_cnt_(2),continuous_slip_cnt_(0),slip_total_cnt_(0),slip_total_ns_(0)
 {
     // image_pub_ = node_.advertise<sensor_msgs::Image>("celex_image", 1);
     // event_pub_ = node_.advertise<celex5_msgs_sdk::EventVector>("celex_event", 1);
@@ -18,6 +19,11 @@ SlipDetector::SlipDetector() : node_("~"),off_time_zero_(-99),cur_off_time_from_
     node_.param<int>("ROI_left",ROI_area_[1],0);
     node_.param<int>("ROI_width",ROI_area_[2],1280);
     node_.param<int>("ROI_height",ROI_area_[3],800);
+    ROI_area_top_=ROI_area_[0];
+    ROI_area_left_=ROI_area_[1];
+    ROI_area_bot_=ROI_area_[0]+ROI_area_[3]-1;
+    ROI_area_right_=ROI_area_[1]+ROI_area_[2]-1;
+
     ROS_INFO("ROI_area is: topLetf(%d, %d); wifth:%d; height:%d.",ROI_area_[0],ROI_area_[1],ROI_area_[2],ROI_area_[3]);
 
 
@@ -45,6 +51,7 @@ void SlipDetector::setCeleX5(CeleX5 *pcelex)
 {
     celex_ = pcelex;
     celex_->setThreshold(threshold_);
+    celex_->disableIMUModule();
 
     CeleX5::CeleX5Mode mode;
     if (celex_mode_ == "Event_Off_Pixel_Timestamp_Mode")
@@ -61,6 +68,7 @@ void SlipDetector::setCeleX5(CeleX5 *pcelex)
         mode = CeleX5::Optical_Flow_Mode;
         celex_->enableEventOpticalFlow();
         celex_->setSensorFixedMode(mode);
+        celex_->setEventFrameTime(1000);
         // ROS_INFO("of time is %d",celex_->getOpticalFlowFrameTime());
         // 20 for default
         // range is (10,180)
@@ -75,19 +83,19 @@ void SlipDetector::setCeleX5(CeleX5 *pcelex)
         celex_->setSensorLoopMode(CeleX5::Event_Off_Pixel_Timestamp_Mode,3);
         celex_->setPictureNumber(1,CeleX5::Full_Picture_Mode);
         // celex_->setEventDuration(500); //us?
-        celex_->setOpticalFlowFrameTime(1);
+        celex_->setOpticalFlowFrameTime(20);
+        ROS_INFO("work loop1 mode is:%d",celex_->getSensorLoopMode(1));
+        ROS_INFO("work loop2 mode is:%d",celex_->getSensorLoopMode(2));
+        ROS_INFO("work loop3 mode is:%d",celex_->getSensorLoopMode(3));
     }
+
+
     ROS_INFO("mode is:%s:",celex_mode_.c_str());
     ROS_INFO("clock rate:%d Hz",celex_->getClockRate());
 
-    celex_->disableIMUModule();
-
-
     ROS_INFO("work rate is:%d us", celex_->getEventFrameTime());
     ROS_INFO("work fixed mode is:%d",celex_->getSensorFixedMode());
-    ROS_INFO("work loop1 mode is:%d",celex_->getSensorLoopMode(1));
-    ROS_INFO("work loop2 mode is:%d",celex_->getSensorLoopMode(2));
-    ROS_INFO("work loop3 mode is:%d",celex_->getSensorLoopMode(3));
+
 }
 
 uint64_t SlipDetector::get_cur_off_time_from_zero(){return cur_off_time_from_zero_;}
@@ -149,16 +157,15 @@ bool SlipDetector::isLineDetected(cv::Mat& mat_hough)
 // 这里和event_cnt里边那个是一致的
 bool SlipDetector::isInRangeROI(int row, int col)
 {
-    if(ROI_area_[0]<=row && row <= ROI_area_[0]+ROI_area_[3]-1)
+    if(ROI_area_top_<=row && row <= ROI_area_bot_)
     {
-        if(ROI_area_[1]<=col && col <= ROI_area_[1]+ROI_area_[2]-1)
+        if(ROI_area_left_<=col && col <= ROI_area_right_)
         {
             return true;
         }
     }
     ROS_INFO("(row,col)out of range(%d, %d)",row,col);
     return false;
-
 }
 
 bool SlipDetector::updateEventWindow(int data_size)
@@ -196,14 +203,19 @@ bool SlipDetector::run()
     initEventWindow();
     ROS_INFO("init done");
 
+    // Stopwatch timer;
     while (node_.ok() && isRunning)
     {
+        timer_.tic();
         if (isSlipped())
         {
-            ROS_INFO("SLIPPPPPPPPPPPPPPPPPPPPPPPPPING");
             std_msgs::String msggg;
             msggg.data = "SLIPPED";
             slipPublish(msggg);
+            auto elapsed = timer_.toc();
+            ROS_INFO("SLIPPPPPPPPPPPPPPPPPPPPPPPPPING:%fms",elapsed/1000000);
+            slip_total_cnt_++;
+            slip_total_ns_+=elapsed;
         }
         std_msgs::String msggg;
         msggg.data="123123123";

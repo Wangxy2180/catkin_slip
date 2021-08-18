@@ -54,9 +54,9 @@ bool EventCntSlipDetector::grabEventDataSizeROI(CeleX5 *celex,celex5_msgs_sdk::E
         int ROI_data_size = 0;
         for(int i = 0;i<data_size;++i)
         {
-            if(ROI_area_[0]<=vecEvent[i].row && vecEvent[i].row < ROI_area_[0]+ROI_area_[3]-1)
+            if(ROI_area_top_<=vecEvent[i].row && vecEvent[i].row < ROI_area_bot_)
             {
-                if(ROI_area_[1]<=vecEvent[i].col && vecEvent[i].col < ROI_area_[1]+ROI_area_[2]-1)
+                if(ROI_area_left_<=vecEvent[i].col && vecEvent[i].col < ROI_area_right_)
                 {
                     ROI_data_size++;
                     // mat_ROI_.at<uchar>(ROI_area_[3]-(vecEvent[i].row - ROI_area_[0])-1,ROI_area_[2]-(vecEvent[i].col - ROI_area_[1])-1) = 255;
