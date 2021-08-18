@@ -11,8 +11,9 @@
     <arg name="ROI_height" default="800"/>
 
     <!-- 两个阈值缩放参数，似乎这个角点阈值似乎没啥用 -->
-    <arg name="dynamic_threshold_scale" default="1.66"/>
-    <arg name="cor_threshold_scale" default="1.7"/>
+    <!-- 1.66 ， 1.7 -->
+    <arg name="dynamic_threshold_scale" default="1.60"/>
+    <arg name="cor_threshold_scale" default="1.85"/>
 
     <!-- 允许的最大连续滑动次数，超过此就不再publish，如果希望所有滑动都报告，那就调大一点 -->，
     <arg name="max_slip_cnt" default="2"/>
@@ -33,8 +34,8 @@
     <!-- <arg name="detector_type" default="slip_detector_node"/> -->
 
     <!-- 三种检测方法，Event_Off是最快的 -->
-    <!-- <arg name="celex_mode" default="Optical_Flow_Mode"/> -->
-    <arg name="celex_mode" default="Event_Off_Pixel_Timestamp_Mode"/>
+    <arg name="celex_mode" default="Optical_Flow_Mode"/>
+    <!-- <arg name="celex_mode" default="Event_Off_Pixel_Timestamp_Mode"/> -->
     <!-- <arg name="celex_mode" default="Loop_Mode"/> -->
 
     

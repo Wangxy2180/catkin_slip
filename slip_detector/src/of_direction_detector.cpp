@@ -7,6 +7,8 @@ OFDirectionSlipDetector::OFDirectionSlipDetector(/* args */)
     detector_name = "of_direction";
     OF_buffer=new uint8_t[CELEX5_PIXELS_NUMBER];
     memset(OF_buffer,0,CELEX5_PIXELS_NUMBER);
+    // 因为没有角点阈值，所以为了让他有一个
+    cor_window_(0)=5;
 }
 
 OFDirectionSlipDetector::~OFDirectionSlipDetector()
@@ -74,6 +76,7 @@ bool OFDirectionSlipDetector::getOFDirection(uint8_t* OF_buffer)
     {
         for (int j = 0; j < CELEX5_COL; ++j)
         {
+            if(!isInRangeROI(i,j)){ROS_INFO("==============");continue;}
             value = OF_buffer[i*CELEX5_COL+j];
             if (0 == value)
             {
@@ -180,16 +183,16 @@ bool OFDirectionSlipDetector::isOFSlip()
     // 方向是否是down
     if(!grabOFState(celex_))return false;
     // 数量是否满足
-    if (env_window_(9) > dynamic_threshold_)
+    if (env_window_(envWindowSize-1) > dynamic_threshold_)
     {
         ROS_INFO("more");
         ret = true;
     }
     // 这一步似乎意义不大，因为基本more了，就slip了
-    if(!isLineDetected(mat_half_))
-    {
-        ret = false;
-    }
+    // if(!isLineDetected(mat_half_))
+    // {
+    //     ret = false;
+    // }
 
     return ret;
 }

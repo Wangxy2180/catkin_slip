@@ -25,6 +25,7 @@ public:
     int getCorWindowNum(int num);
     bool isLineDetected(cv::Mat& mat_hough);
     bool isCornerDetected(cv::Mat& mat_corner);
+    bool isInRangeROI(int row, int col);
 
 
     bool updateEventWindow(int data_size);
@@ -36,6 +37,7 @@ public:
     int  get_slip_cnt();
 
     int get_max_slip_cnt();
+
 
 
     virtual bool isSlipped()=0;

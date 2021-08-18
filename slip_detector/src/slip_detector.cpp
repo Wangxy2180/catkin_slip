@@ -64,7 +64,7 @@ void SlipDetector::setCeleX5(CeleX5 *pcelex)
         // ROS_INFO("of time is %d",celex_->getOpticalFlowFrameTime());
         // 20 for default
         // range is (10,180)
-        celex_->setOpticalFlowFrameTime(11);
+        celex_->setOpticalFlowFrameTime(20);
         // ROS_INFO("of time is %d",celex_->getOpticalFlowFrameTime());
     }
     else if (celex_mode_ == "Loop_Mode")
@@ -144,6 +144,21 @@ bool SlipDetector::isLineDetected(cv::Mat& mat_hough)
     
     if(lines.size()>0)return true;
     return false;
+}
+
+// 这里和event_cnt里边那个是一致的
+bool SlipDetector::isInRangeROI(int row, int col)
+{
+    if(ROI_area_[0]<=row && row <= ROI_area_[0]+ROI_area_[3]-1)
+    {
+        if(ROI_area_[1]<=col && col <= ROI_area_[1]+ROI_area_[2]-1)
+        {
+            return true;
+        }
+    }
+    ROS_INFO("(row,col)out of range(%d, %d)",row,col);
+    return false;
+
 }
 
 bool SlipDetector::updateEventWindow(int data_size)
