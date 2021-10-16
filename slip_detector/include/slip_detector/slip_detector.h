@@ -16,7 +16,7 @@ class SlipDetector
 {
 public:
     SlipDetector(/* args */);
-    ~SlipDetector();
+    virtual ~SlipDetector();
 
     void setCeleX5(CeleX5 *pcelex);
     bool run();
